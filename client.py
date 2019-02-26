@@ -10,7 +10,7 @@ def callback(tls_socket):
 
 
 tls = TLS(None)
-tls.initialize_connection()
+# tls.initialize_connection()
 hello_client_params = {
 	'random': "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
 	'version': "0303",
@@ -21,5 +21,7 @@ hello_client_params = {
 	'header': "16030400",
 	'handshake_header': "01"
 }
+tls.secret = "df4a291baa1eb7cfa6934b29b474baad2697e29f1f920dcc77c8a0a088447624"
+a = tls.server_handshake_key_generation()
+print(a)
 
-tls.hello(hello_client_params)
