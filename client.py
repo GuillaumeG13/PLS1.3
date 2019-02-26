@@ -1,10 +1,25 @@
-from tls_socket import *
-
+from tls import *
 def callback(tls_socket):
 	return "callback client"
 
-socket = SocketTLS(ip="127.0.0.1", port=1799, server=False, callback=callback)
-socket.initialize_connection()
-socket.update("One two one two\n")
-send = socket.send()
-print("Client send : " + send)
+# socket = SocketTLS(ip="127.0.0.1", port=1799, server=False, callback=callback)
+# socket.initialize_connection()
+# socket.update("One two one two\n")
+# send = socket.send()
+# print("Client send : " + send)
+
+
+tls = TLS(None)
+tls.initialize_connection()
+hello_client_params = {
+	'random': "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+	'version': "0303",
+	'session_id': "20e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+	'cipher_suites': "00021301",
+	'compression_method': "00",
+	'extension_length': "0000",
+	'header': "16030400",
+	'handshake_header': "01"
+}
+
+tls.hello(hello_client_params)
