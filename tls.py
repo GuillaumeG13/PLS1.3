@@ -2,6 +2,8 @@ from tls_socket import *
 from math import floor
 from hash import encrypt_string
 from hkdf import *
+from binascii import unhexlify
+import subprocess
 
 
 
@@ -24,6 +26,7 @@ class TLS:
 		self.client_handshake_key = ""
 		self.server_handshake_iv = ""
 		self.server_handshake_key = ""
+		self.handshake_secret = ""
 
 
 	def hello(self, params):
@@ -70,71 +73,15 @@ class TLS:
 		# Multiplication courbe ECC
 		# TODO : Maxime et Marcou
 		# self.receive_external_key()
+
 		# self.secret = hex(int(self.private_key, 16) * int(self.external_key, 16)).split('0x')[1]
 		# hello_hash = encrypt_string("".join(self.messageHelloList))
 		hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
-		return self.key_extension(hello_hash)
+		keys = subprocess.check_output("windaube " + hello_hash + " " + self.secret, shell=True)
+		[self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv] = keys.decode().split('plop')[1].split(' ')[1:-1]
+		return self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv
 
 
-	def key_extension(self, hash):
-		hello_hash = str.encode(hash)
-		empty_hash = hashlib.sha256(b"").digest()
-
-		early_secret = hkdf_extract(
-			salt=b'00000000000000000000000000000000',
-			input_key_material=b'00000000000000000000000000000000',
-			hash=hashlib.sha256
-		)
-
-		derived_secret = hkdf_expand(
-			pseudo_random_key=early_secret,
-			info=empty_hash,
-			length=32,
-			hash=hashlib.sha256
-		)
-		handshake_secret = hkdf_extract(
-			salt=derived_secret,
-			input_key_material=str.encode(self.secret),
-			hash=hashlib.sha256,
-		)
-		client_handshake_traffic_secret = hkdf_expand(
-			pseudo_random_key=handshake_secret,
-			info=hello_hash,
-			length=32,
-			hash=hashlib.sha256
-		)
-		server_handshake_traffic_secret = hkdf_expand(
-			pseudo_random_key=handshake_secret,
-			info=hello_hash,
-			length=32,
-			hash=hashlib.sha256
-		)
-		self.client_handshake_key = hkdf_expand(
-			pseudo_random_key=client_handshake_traffic_secret,
-			info=b"",
-			length=16,
-			hash=hashlib.sha256
-		)
-		self.server_handshake_key = hkdf_expand(
-			pseudo_random_key=server_handshake_traffic_secret,
-			info=b"",
-			length=16,
-			hash=hashlib.sha256
-		)
-		self.client_handshake_iv = hkdf_expand(
-			pseudo_random_key=client_handshake_traffic_secret,
-			info=b"",
-			length=12,
-			hash=hashlib.sha256
-		)
-		self.server_handshake_iv = hkdf_expand(
-			pseudo_random_key=server_handshake_traffic_secret,
-			info=b"",
-			length=12,
-			hash=hashlib.sha256
-		)
-
-		return self.client_handshake_iv, self.client_handshake_key, self.server_handshake_iv, self.server_handshake_key
 
 	def initialize_connection(self):
 		self.socket.initialize_connection()
