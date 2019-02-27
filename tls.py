@@ -6,7 +6,7 @@ from constants import *
 from message_utils import *
 
 class TLS:
-	def __init__(self, curve, serveur=True):
+	def __init__(self, curve, serveur=True, certificate=""):
 		self.curve = curve
 		self.callback = None
 		self.socket = SocketTLS(ip="127.0.0.1", port=1799, server=False, workers=5)
@@ -23,6 +23,9 @@ class TLS:
 		self.server_handshake_iv = ""
 		self.server_handshake_key = ""
 		self.handshake_secret = ""
+
+		self.certificate = certificate
+
 
 	def initialize_connection(self):
 		self.socket.initialize_connection()
@@ -67,19 +70,11 @@ class TLS:
 		msg = self.socket.receive()
 		self.messageHelloList.append(msg[5:])
 
-	def verify_certificates(self):
-		# TODO
-		pass
-
 	def generate_asymetrique_keys(self):
 		# TODO : Maxime & Marcou
 		self.private_key = ""
 		self.public_key = ""
 
-	def publish_public_key(self):
-		# TODO
-		pass
-	
 	def receive_external_key(self):
 		"""Publish and get public keys"""
 		if self.serveur:
@@ -107,5 +102,43 @@ class TLS:
 		[self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv] = keys.decode().split('plop')[1].split(' ')[1:-1]
 		return self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv
 
-	def handshake_encryption(self):
+	def send_certificate(self, params):
+		# First message is related to certificate
+		data = self.format_length(len(self.certificate) / 2, 6) + self.certificate + params['certificate_extension']
+		data = params['request_context'] + self.format_length(len(data)/2, 6) + data
+		data = '0b' + self.format_length(len(data) / 2, 6) + data
+
+		self.socket.update(data)
+		self.socket.send()
+
+		# This message contain information to verify certificate information
+		data = ""
+		
+
+	def verify_certificates(self):
+		# TODO
 		pass
+
+
+
+
+
+	def data_encryption(self):
+		# TODO : Julie AES
+		# La data à chiffrer doit etre placé dans self.socket.data
+		# On la met a jour avec self.socket.update()
+		# On l'envoie avec self.socket.send()
+
+
+
+
+	@staticmethod
+	def format_length(length, size):
+		"""Give the hexadecimal notation of decimal length on size digits
+			format_length(2, 4) = 0002
+			format_length(16,3) = 010
+		"""
+		formatted = hex(length).split('0x')[1]
+		while len(formatted) < size:
+			formatted = '0' + formatted
+		return formatted
