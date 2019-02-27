@@ -1,5 +1,5 @@
 from constants import *
-from crypto_utils import *
+from aes_utils import *
 
 def get_bytes(message, index, number):
   byte_index = 2*(index)
@@ -17,8 +17,9 @@ def hexa_to_dec(string):
 def dec_to_hexa(number, bytes_count):
   hexa_string = hex(number)[2:]
   if len(hexa_string) < 2*bytes_count:
-    return (bytes_count - len(hexa_string)) * "0" + hexa_string
-
+    return ''.join(['0' for i in range(2*bytes_count - len(hexa_string))]) + hexa_string
+  else:
+    return hexa_string
 
 def get_record_type(message):
   return message[:2]
@@ -54,8 +55,3 @@ def get_message_type(message, **kwargs):
   for t, f in test_functions.items() :
     if f(message, **kwargs) :
       return t
-
-
-# message = "1603030040404142434445464748494a4b4c4d4e4f227bc9ba81ef30f2a8a78ff1df50844d5804b7eeb2e214c32b6892aca3db7b78077fdd90067c516bacb3ba90dedf720f"
-# hexkey = "f656d037b173ef3e11169f27231a84b6"
-# print(get_message_type(message, client_write_key=hexkey))
