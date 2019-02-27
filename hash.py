@@ -1,6 +1,5 @@
-## SHA-256 test with hashlib
+## SHA-256 function with hashlib
 ## source : https://medium.com/@dwernychukjosh/sha256-encryption-with-python-bf216db497f9
-## tested by Guillaume Gay
 
 import hashlib
 
