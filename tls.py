@@ -19,11 +19,11 @@ class TLS:
 		self.secret = ""        # Secret shared through DeffieHellman
 		self.serveur = serveur
 
-		self.client_handshake_iv = ""
-		self.client_handshake_key = ""
-		self.server_handshake_iv = ""
-		self.server_handshake_key = ""
-		self.handshake_secret = ""
+		self.client_handshake_iv = b""
+		self.client_handshake_key = b""
+		self.server_handshake_iv = b""
+		self.server_handshake_key = b""
+		self.handshake_secret = b""
 
 		self.certificate = certificate
 
@@ -103,21 +103,37 @@ class TLS:
 				+ context
 		)
 
+
 	def hkdf_expand_label(self, secret, label, context, length):
 		import hkdf
 		hkdf_label = self.hkdf_label(label, context, length)
 		return hkdf.hkdf_expand(secret, hkdf_label, length, hashlib.sha256)
+
+	def key_expansion(self, hash):
+		hello_hash = unhexlify(hash)
+		empty_hash = hashlib.sha256(b'').digest()
+		early_secret = self.hkdf_extract(b'\x00', None)
+		derived_secret = self.hkdf_expand_label(early_secret, b"derived", empty_hash, 32)
+
+		handshake_secret = self.hkdf_extract(derived_secret, unhexlify(self.secret))
+		client_handshake_traffic_secret = self.hkdf_expand_label(handshake_secret, b"c hs traffic", hello_hash, 32)
+		server_handshake_traffic_secret = self.hkdf_expand_label(handshake_secret, b"s hs traffic", hello_hash, 32)
+		self.client_handshake_key = self.hkdf_expand_label(client_handshake_traffic_secret, b"key", b"", 16)
+		self.server_handshake_key = self.hkdf_expand_label(server_handshake_traffic_secret, b"key", b"", 16)
+		self.client_handshake_iv = self.hkdf_expand_label(client_handshake_traffic_secret, b"iv", b"", 12)
+		self.server_handshake_iv = self.hkdf_expand_label(server_handshake_traffic_secret, b"iv", b"", 12)
 
 	def handshake_key_generation(self):
 		# Multiplication courbe ECC
 		# TODO : Maxime et Marcou
 		# self.receive_external_key()
 		# self.secret = hex(int(self.private_key, 16) * int(self.external_key, 16)).split('0x')[1]
-		hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
+		# hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
+
+		hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
 		print("Hello hash : " + hello_hash)
-		keys = subprocess.check_output("windaube " + hello_hash + " " + self.secret, shell=True)
-		[self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv] = keys.decode().split('plop')[1].split(' ')[1:-1]
-		return self.client_handshake_key, self.server_handshake_key, self.client_handshake_iv, self.server_handshake_iv
+		self.key_expansion(hello_hash)
+		return self.client_handshake_key.hex(), self.server_handshake_key.hex(), self.client_handshake_iv.hex(), self.server_handshake_iv.hex()
 
 	def send_certificate(self, params):
 		# First message is related to certificate
