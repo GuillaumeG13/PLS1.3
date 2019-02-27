@@ -67,9 +67,34 @@ class TLS:
 
 		return data
 
-	def receive_hello(self):
-		msg = self.socket.receive()
-		self.messageHelloList.append(msg[5:])
+	def receive_hello(self, message):
+		self.messageHelloList.append(message[5:])
+		""" 
+		Record Header: 5 bytes
+		Handshake Header: 4 bytes
+		Client Version: 2 bytes
+		Client Random: 32 bytes
+			--> 43 bytes
+		Session ID length: 1 byte
+		Cipher Suites length: 2 bytes
+		Compression Methods length: 1 byte
+		"""
+		random_index = 11
+		session_id_index = random_index + 32
+		n_session_id = hexa_to_dec(get_bytes(message, session_id_index, 1))
+		cipher_suites_index = session_id_index + n_session_id + 1
+		n_ciph_s = hexa_to_dec(get_bytes(message, cipher_suites_index, 2))
+		compression_methods_index = cipher_suites_index + n_ciph_s + 2
+		n_comp_m = hexa_to_dec(get_bytes(message, compression_methods_index, 1))
+
+		hello = dict()
+		hello['random'] = get_bytes(message, random_index, 32)
+		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
+		hello['cipher_suites'] = get_bytes(message, cipher_suites_index, n_ciph_s + 2)
+		hello['compression_method'] = get_bytes(message, compression_methods_index, n_comp_m + 1)
+
+		return hello
+
 
 	def generate_asymetrique_keys(self):
 		# TODO : Maxime & Marcou
