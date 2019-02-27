@@ -2,6 +2,8 @@ from tls_socket import *
 import subprocess
 import hashlib
 from binascii import unhexlify
+from constants import *
+from message_utils import *
 
 class TLS:
 	def __init__(self, curve, serveur=True, certificate=""):
@@ -29,25 +31,37 @@ class TLS:
 	def initialize_connection(self):
 		self.socket.initialize_connection()
 
+	def get_extension_key_share(self):
+		"""
+		00 33 - assigned value for extension "Key Share"
+		00 24 - 0x24 (36) bytes of "Key Share" extension data follows
+		00 1d - assigned value for x25519 (key exchange via curve25519)
+		00 20 - 0x20 (32) bytes of public key follows
+		9f d7 ... b6 15 - public key from the step "Exchange Generation"
+		"""
+		return EXTENSIONS.KEY_SHARE.value + dec_to_hexa(36, 2) + X25519_CURVE_KEY + dec_to_hexa(b_len(self.public_key), 2) + self.public_key 
+
+
 	def hello(self, params):
 		random = params['random']
-		version = params['version']
 		session_id = params['session_id']
 		cipher_suites = params['cipher_suites']
 		compression_method = params['compression_method']
-		extension_length = params['extension_length']
 
-		data = version + random + session_id + cipher_suites + compression_method + extension_length
-		# Length of data in bytes
-		size = int(len(data) / 2)
+		key_share_extension = self.get_extension_key_share()
+		extension_length = dec_to_hexa(b_len(key_share_extension), 2)
 
-		handshake_header = params['handshake_header'] + TLS.format_length(size, 6)
-		header = params['header'] + TLS.format_length(size + 4, 4) + handshake_header
+		data = PROTOCOL_VERSION + random + session_id + cipher_suites + compression_method + extension_length + key_share_extension
+		data_length = dec_to_hexa(b_len(data), 3)
 
-		msg = header + data
+		handshake_header = HANDSHAKE_MESSAGE_TYPES.SERVER_HELLO.value if self.serveur else HANDSHAKE_MESSAGE_TYPES.CLIENT_HELLO.value + data_length
+
+		handshake_length = dec_to_hexa(b_len(handshake_header + data), 2)
+		record_header = RECORD_TYPES.HANDSHAKE.value + PROTOCOL_VERSION + handshake_length
+
+		msg = record_header + handshake_header + data
 		self.messageHelloList.append(msg[5:])
 
-		# Send the message through the socket
 		self.socket.update(msg)
 		self.socket.send()
 
