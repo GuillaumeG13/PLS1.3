@@ -6,6 +6,7 @@ class ClientHello():
 	def __init__(self, message):
 		if not is_client_hello(message):
 			raise Exception("Incorrect message: This is not a client hello.")
+			
 		else:
 			""" 
 			Record Header: 5 bytes

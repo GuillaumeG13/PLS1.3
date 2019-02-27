@@ -18,12 +18,12 @@ class Session():
 		self.server_write_key = None
 		self.client_write_iv = None
 		self.server_write_iv = None
+
+		self.state = MESSAGES.CLIENT_HELLO
 	
 	def set_server_hello(self, server_hello):
 		self.server_hello = server_hello
 	
-
-
 class Server():
 	def __init__(self, name):
 		self.name = name
@@ -50,6 +50,7 @@ class Server():
 		session = self.get_or_initialize_session(client_hello)
 
 		server_hello = ServerHello(cipher_suites=client_hello.cipher_suites, compression_methods=client_hello.compression_methods)
+		session.set_server_hello(server_hello)
 
 		socket.update(server_hello.serialize())
 		socket.send()
@@ -87,4 +88,3 @@ class Server():
 
 server = Server("www.abc.com")
 server.start()
-

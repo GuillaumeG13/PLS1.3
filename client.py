@@ -14,5 +14,3 @@ while True:
 	data = socket.receive()
 	message = data.decode()
 	print("CLIENT: RECEIVED: " + message)
-
-
