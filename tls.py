@@ -54,7 +54,7 @@ class TLS:
 		data = PROTOCOL_VERSION + random + session_id + cipher_suites + compression_method + extension_length + key_share_extension
 		data_length = dec_to_hexa(b_len(data), 3)
 
-		handshake_header =  HANDSHAKE_MESSAGE_TYPES.SERVER_HELLO.value if self.serveur else HANDSHAKE_MESSAGE_TYPES.CLIENT_HELLO.value + data_length
+		handshake_header = HANDSHAKE_MESSAGE_TYPES.SERVER_HELLO.value if self.serveur else HANDSHAKE_MESSAGE_TYPES.CLIENT_HELLO.value + data_length
 
 		handshake_length = dec_to_hexa(b_len(handshake_header + data), 2)
 		record_header = RECORD_TYPES.HANDSHAKE.value + PROTOCOL_VERSION + handshake_length
