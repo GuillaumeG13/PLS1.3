@@ -19,6 +19,6 @@ hello_client_params = {
 	'compression_method': "0100",
 }
 tls.secret = "df4a291baa1eb7cfa6934b29b474baad2697e29f1f920dcc77c8a0a088447624"
-a = tls.handshake_key_generation()
+a = tls.application_key_generation()
 print(a)
 
