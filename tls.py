@@ -47,6 +47,7 @@ class TLS:
 			self.run_as_client()
 
 	def run_as_client(self):
+		self.initialize_connection()
 		self.generate_asymetrique_keys()
 		params = {
 			'random': '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
@@ -96,7 +97,7 @@ class TLS:
 		return EXTENSIONS.KEY_SHARE.value + dec_to_hexa(36, 2) + X25519_CURVE_KEY + dec_to_hexa(b_len(self.public_key), 2) + self.public_key
 
 
-	# Tested for server
+	# Tested
 	def hello(self, params):
 		"""
 		Tested for server part
@@ -129,8 +130,10 @@ class TLS:
 
 		return data
 
-	def receive_hello(self, message):
-		self.messageHelloList.append(message[5:])
+	# Tested
+	def receive_hello(self):
+		message = self.socket.receive().decode()
+		self.messageHelloList.append(message[10:])
 		""" 
 		Record Header: 5 bytes
 		Handshake Header: 4 bytes
@@ -148,8 +151,8 @@ class TLS:
 		extension_type = get_bytes(message, extensions_index + 2, 2)
 		print(extension_type)
 
-		if extension_type != EXTENSIONS.KEY_SHARE.value :
-			raise Exception('There should be only one extension in Hello: Key Share ("00 33")')
+		# if extension_type != EXTENSIONS.KEY_SHARE.value :
+		# 	raise Exception('There should be only one extension in Hello: Key Share ("00 33")')
 
 		"""
 		Extensions Length: 2 bytes
@@ -159,17 +162,16 @@ class TLS:
 		key_share_index = extensions_index + 2
 		n_key_share = hexa_to_dec(get_bytes(message, key_share_index - 2, 2))
 
-
 		hello = dict()
 		hello['random'] = get_bytes(message, random_index, 32)
 		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
 		hello['public_key'] = get_bytes(message, key_share_index, n_key_share)
-
+		self.external_key = hello['public_key']
 		print("hello object: ")
 		print(hello)
 
+		print("Received Hello : " + message)
 		return hello
-
 
 	def generate_asymetrique_keys(self):
 		# TODO : Maxime & Marcou
