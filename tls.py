@@ -67,6 +67,7 @@ class TLS:
 
 		self.log_title("WAITING FOR SERVER CERTIFICATE")
 		self.verify_certificates()
+		print(self.messageHandshake)
 		print(self.application_key_generation())
 
 		self.log_title("SENDING CLIENT HANDSHAKE FINISHED")
@@ -85,6 +86,7 @@ class TLS:
 		
 		self.log_title("SENDING A SERVER HELLO")
 		self.hello(params)
+		print(self.messageHelloList)
 		self.handshake_key_generation()
 		params = {
 			'request_context': '00',
@@ -137,8 +139,6 @@ class TLS:
 		record_header = RECORD_TYPES.HANDSHAKE.value + (TLS12_PROTOCOL_VERSION if self.serveur else TLS11_PROTOCOL_VERSION) + handshake_length
 
 		msg = record_header + handshake_header + data
-		self.messageHelloList.append(msg[10:])
-		self.messageHandshake.append(msg[10:])
 
 		self.log("Hello record_header : " + format_bytes(record_header))
 		self.log("Hello handshake_header : " + format_bytes(handshake_header))
@@ -147,6 +147,9 @@ class TLS:
 		self.socket.update(msg)
 		self.socket.send()
 
+		self.messageHelloList.append(msg[10:])
+		self.messageHandshake.append(msg[10:])
+
 		return data
 
 	# Tested
@@ -154,6 +157,7 @@ class TLS:
 		message = self.socket.receive().decode()
 		self.log("Received message: " + message)
 		self.messageHelloList.append(get_bytes(message, 5))
+		self.messageHandshake.append(get_bytes(message, 5))
 		""" 
 		Record Header: 5 bytes
 		Handshake Header: 4 bytes
@@ -230,7 +234,6 @@ class TLS:
 		empty_hash = hashlib.sha256(b'').digest()
 		early_secret = self.hkdf_extract(b'\x00', None)
 		derived_secret = self.hkdf_expand_label(early_secret, b"derived", empty_hash, 32)
-
 		self.handshake_secret = self.hkdf_extract(derived_secret, unhexlify(self.secret))
 		self.client_handshake_traffic_secret = self.hkdf_expand_label(self.handshake_secret, b"c hs traffic", hello_hash, 32)
 		self.server_handshake_traffic_secret = self.hkdf_expand_label(self.handshake_secret, b"s hs traffic", hello_hash, 32)
@@ -239,14 +242,16 @@ class TLS:
 		self.client_handshake_iv = self.hkdf_expand_label(self.client_handshake_traffic_secret, b"iv", b"", 12)
 		self.server_handshake_iv = self.hkdf_expand_label(self.server_handshake_traffic_secret, b"iv", b"", 12)
 
+
+
 	# Tested
 	def handshake_key_generation(self):
 		# Multiplication courbe ECC
 		# TODO : Maxime et Marcou
 		# self.secret = hex(int(self.private_key, 16) * int(self.external_key, 16)).split('0x')[1]
-		hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
+		# hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
 
-		# hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
+		hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
 		self.log("Hello hash : " + hello_hash)
 		self.key_expansion(hello_hash)
 		return self.client_handshake_key.hex(), self.server_handshake_key.hex(), self.client_handshake_iv.hex(), self.server_handshake_iv.hex()
@@ -293,7 +298,7 @@ class TLS:
 		self.socket.update(data)
 		self.socket.send()
 		self.log("Certificate sent!")
-		self.messageHandshake.append(data)
+		# self.messageHandshake.append(data) # Wrapper is not an handshake
 
 	def verify_certificates(self):
 		self.log("Waiting for certificate...")
@@ -326,10 +331,10 @@ class TLS:
 		
 		# TODO : Verify Signature
 
-		index = index+12+verify_size
-		finish_size = int(body[index+2:index+6],16)
-		finish = body[index+6:index+6+finish_size]
-
+		# index = index+12+verify_size
+		# finish_size = int(body[index+2:index+6],16)
+		# finish = body[index+6:index+6+finish_size]
+		finish = ""
 		self.log("finish =  " + format(finish))
 
 		self.receive_server_handshake_finished(finish)
@@ -338,7 +343,8 @@ class TLS:
 		finished_key = self.hkdf_expand_label(self.client_handshake_traffic_secret, b"finished", b"", 32)
 		finished_hash = hashlib.sha256(unhexlify("".join(self.messageHandshake))).digest()
 		verify_data = hmac.new(finished_key, finished_hash).hexdigest()
-		data = self.data_encryption(verify_data, self.client_handshake_key, self.client_handshake_iv)
+		# data = self.data_encryption(verify_data, self.client_handshake_key, self.client_handshake_iv)
+		data = verify_data
 		header = "1703030035" + self.format_length(len(data) / 2, 4)
 		data = data + header
 		self.socket.update(data)
@@ -393,8 +399,8 @@ class TLS:
 
 	# Tested
 	def application_key_generation(self):
-		# handshake_hash = hashlib.sha256(unhexlify("".join(self.messageHandshake))).digest()
-		handshake_hash = unhexlify("22844b930e5e0a59a09d5ac35fc032fc91163b193874a265236e568077378d8b")
+		handshake_hash = hashlib.sha256(unhexlify("".join(self.messageHandshake))).digest()
+		# handshake_hash = unhexlify("22844b930e5e0a59a09d5ac35fc032fc91163b193874a265236e568077378d8b")
 		return self.key_expansion_application(handshake_hash)
 
 	def log(self, message):
