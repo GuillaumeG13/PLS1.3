@@ -89,12 +89,10 @@ class TLS:
 	def get_extension_key_share(self):
 		"""
 		00 33 - assigned value for extension "Key Share"
-		00 24 - 0x24 (36) bytes of "Key Share" extension data follows
-		00 1d - assigned value for x25519 (key exchange via curve25519)
 		00 20 - 0x20 (32) bytes of public key follows
 		9f d7 ... b6 15 - public key from the step "Exchange Generation"
 		"""
-		return EXTENSIONS.KEY_SHARE.value + dec_to_hexa(36, 2) + X25519_CURVE_KEY + dec_to_hexa(b_len(self.public_key), 2) + self.public_key
+		return EXTENSIONS.KEY_SHARE.value + dec_to_hexa(b_len(self.public_key), 2) + self.public_key
 
 
 	# Tested
@@ -107,12 +105,14 @@ class TLS:
 		random = params['random']
 		session_id = params['session_id']
 
-		key_share_extension = self.get_extension_key_share() + '002b00020304'
+		key_share_extension = self.get_extension_key_share()
 		extension_length = dec_to_hexa(b_len(key_share_extension), 2)
+		print(extension_length)
 
 		data = PROTOCOL_VERSION + random + session_id + extension_length + key_share_extension
-		print(len(data))
+		
 		data_length = self.format_length(len(data)/2, 6)
+		print(data_length)
 
 		handshake_header = HANDSHAKE_MESSAGE_TYPES.SERVER_HELLO.value if self.serveur else HANDSHAKE_MESSAGE_TYPES.CLIENT_HELLO.value
 		handshake_header += data_length
@@ -123,8 +123,6 @@ class TLS:
 		msg = record_header + handshake_header + data
 		self.messageHelloList.append(msg[10:])
 		self.messageHandshake.append(msg[10:])
-		print("Hello Message : " + msg)
-
 		self.socket.update(msg)
 		self.socket.send()
 
@@ -149,7 +147,6 @@ class TLS:
 
 		extensions_index = session_id_index + 1 + n_session_id
 		extension_type = get_bytes(message, extensions_index + 2, 2)
-		print(extension_type)
 
 		# if extension_type != EXTENSIONS.KEY_SHARE.value :
 		# 	raise Exception('There should be only one extension in Hello: Key Share ("00 33")')
@@ -159,18 +156,19 @@ class TLS:
 		Extension Type: 2 bytes
 		Extension Length: 2 bytes
 		"""
-		key_share_index = extensions_index + 2
+		key_share_index = extensions_index + 2 
 		n_key_share = hexa_to_dec(get_bytes(message, key_share_index - 2, 2))
 
 		hello = dict()
 		hello['random'] = get_bytes(message, random_index, 32)
 		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
-		hello['public_key'] = get_bytes(message, key_share_index, n_key_share)
+		hello['public_key'] = get_bytes(message, key_share_index + 4, n_key_share)
 		self.external_key = hello['public_key']
+
 		print("hello object: ")
 		print(hello)
-
 		print("Received Hello : " + message)
+
 		return hello
 
 	def generate_asymetrique_keys(self):

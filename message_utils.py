@@ -11,7 +11,7 @@ def get_bytes_list(message, index, number, grouping=1):
   return bytes_list
 
 def b_len(bytes_string):
-  return int(len(bytes_string) / 2)
+  return len(bytes_string) // 2
 
 def hexa_to_dec(string):
   return int(string, 16)
