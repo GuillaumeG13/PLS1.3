@@ -148,14 +148,9 @@ class TLS:
 		session_id_index = random_index + 32
 		n_session_id = hexa_to_dec(get_bytes(message, session_id_index, 1))
 
-		cipher_suites_index = session_id_index + 1 + n_session_id
-		n_ciph_s = hexa_to_dec(get_bytes(message, cipher_suites_index, 2))
-
-		compression_methods_index = cipher_suites_index + 2 + n_ciph_s
-		n_comp_m = hexa_to_dec(get_bytes(message, compression_methods_index, 1))
-
-		extensions_index = compression_methods_index + 1 + n_comp_m + 2
-		extension_type = get_bytes(message, extensions_index, 2)
+		extensions_index = session_id_index + 1 + n_session_id
+		extension_type = get_bytes(message, extensions_index + 2, 2)
+		print(extension_type)
 
 		if extension_type != EXTENSIONS.KEY_SHARE.value :
 			raise Exception('There should be only one extension in Hello: Key Share ("00 33")')
@@ -172,8 +167,6 @@ class TLS:
 		hello = dict()
 		hello['random'] = get_bytes(message, random_index, 32)
 		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
-		hello['cipher_suites'] = get_bytes(message, cipher_suites_index, n_ciph_s + 2)
-		hello['compression_method'] = get_bytes(message, compression_methods_index, n_comp_m + 1)
 		hello['public_key'] = get_bytes(message, key_share_index, n_key_share)
 
 		print("hello object: ")
