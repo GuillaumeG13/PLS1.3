@@ -81,8 +81,6 @@ class TLS:
 		params = {
 			'random': '707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f',
 			'session_id': 'e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff',
-			'cipher_suites': '1301',
-			'compression_method': '00',
 		}
 		
 		self.log_title("SENDING A SERVER HELLO")
@@ -90,7 +88,6 @@ class TLS:
 		self.handshake_key_generation()
 		params = {
 			'request_context': '00',
-			'certificate_extension': '0000',
 		}
 		self.log_title("SENDING CERTIFICATE")
 		self.send_certificate(params)
@@ -128,7 +125,7 @@ class TLS:
 		extension_length = dec_to_hexa(b_len(key_share_extension), 2)
 		session_id_length = dec_to_hexa(b_len(session_id), 1)
 
-		data = PROTOCOL_VERSION + random + session_id_length + session_id + extension_length + key_share_extension
+		data = SERVER_CLIENT_VERSION + random + session_id_length + session_id + extension_length + key_share_extension
 		
 		data_length = self.format_length(len(data)/2, 6)
 		print(data_length)
@@ -137,7 +134,7 @@ class TLS:
 		handshake_header += data_length
 
 		handshake_length = self.format_length(len(handshake_header + data)/2, 4)
-		record_header = RECORD_TYPES.HANDSHAKE.value + PROTOCOL_VERSION + handshake_length
+		record_header = RECORD_TYPES.HANDSHAKE.value + (TLS12_PROTOCOL_VERSION if self.serveur else TLS11_PROTOCOL_VERSION) + handshake_length
 
 		msg = record_header + handshake_header + data
 		self.messageHelloList.append(msg[10:])
@@ -188,10 +185,7 @@ class TLS:
 		hello['session_id'] = get_bytes(message, session_id_index + 1, n_session_id)
 		hello['public_key'] = get_bytes(message, key_share_index + 4, n_key_share)
 		self.external_key = hello['public_key']
-
-		print("hello object: ")
-		print(hello)
-		print("Received Hello : " + message)
+		self.log("Received public key = " + self.external_key)
 
 		return hello
 
@@ -203,6 +197,8 @@ class TLS:
 		else:
 			self.private_key = "909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf"
 			self.public_key = "9fd7ad6dcff4298dd3f96d5b1b2af910a0535b1488d7f8fabb349a982880b615"
+		self.log("Public key = " + self.public_key)
+		self.log("Private key = " + self.private_key)
 
 	# Tested
 	def hkdf_extract(self, salt, input_key_material):
@@ -278,19 +274,20 @@ class TLS:
 		Length of following: 3 bytes
 		Verify Data: HMAC of finished_key and finished_hash: ??? bytes
 		"""
-		data = self.format_length(len(self.certificate) / 2, 6) + self.certificate + params['certificate_extension']
-		data = params['request_context'] + self.format_length(len(data)/2, 6) + data
-		data = '0b' + self.format_length(len(data) / 2, 6) + data
+
+		data = self.format_length(len(self.certificate) / 2, 6) + self.certificate + CERTIFICATE_EXTENSION
+		data = REQUEST_CONTEXT + self.format_length(len(data)/2, 6) + data
+		data = HANDSHAKE_MESSAGE_TYPES.CERTIFICATE.value + self.format_length(len(data) / 2, 6) + data
 
 		# This message contain information to verify certificate information
 		data_verify = hashlib.sha256(str.encode(data)).hexdigest()
 		# TODO : Signature with elliptical curve
 		# data = self.curve.sign(data)
-		data_verify += '0f' + self.format_length(len(data)/2, 6) + data_verify + self.send_server_handshake_finished()
+		data_verify += HANDSHAKE_MESSAGE_TYPES.CERTIFICATE_VERIFY.value + self.format_length(len(data)/2, 6) + data_verify + self.send_server_handshake_finished()
 
 		# data = self.data_encryption(data + data_verify, self.server_handshake_key, self.server_handshake_iv)
 		data += data_verify
-		header = '170303' + self.format_length(len(data)/2, 4) # Add data size verification data < 16^5 - 1
+		header = RECORD_TYPES.APPLICATION_DATA.value + TLS12_PROTOCOL_VERSION + self.format_length(len(data)/2, 4) # Add data size verification data < 16^5 - 1
 		data = header + data
 		self.log("Wrapper data : " + data)
 		self.socket.update(data)
@@ -314,7 +311,6 @@ class TLS:
 		self.log("BODY = " + format_bytes(body))
 		certificate_type = get_bytes(body, 0, 2)
 		certificate_size = hexa_to_dec(get_bytes(body, 8, 3))
-		self.log("get_bytes(body, 8, 3) = " + format(get_bytes(body, 8, 3)))
 		self.log("certificate_size = " + format(certificate_size))
 
 		certificate = get_bytes(body, 11, certificate_size)
