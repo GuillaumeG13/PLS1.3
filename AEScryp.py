@@ -83,9 +83,9 @@ class AES:
 
 #from AEScryp.py import *
 
-#def data_encryption (self, data, key, iv)
-#	aes = AES(data, key, iv)
-#	cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
-#	self.socket.data = cypher
-#	self.socket.update(cypher)
-#	self.socket.send()
+# def data_encryption (self, data, key, iv)
+# 	aes = AES(data, key, iv)
+# 	cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
+# 	self.socket.data = cypher
+# 	self.socket.update(cypher)
+# 	self.socket.send()
