@@ -7,7 +7,7 @@ class AES:
 	round     = 0
 	iv		  = []
 
-	def __init__(self, plaintext, key, iv):
+	def __init__(self, plaintext = [[0xd6, 0xef, 0xa6, 0xdc], [0x4c, 0xe8, 0xef, 0xd2], [0x47, 0x6b, 0x95, 0x46], [0xd7, 0x6a, 0xcd, 0xf0]], key = [[0x2b,0x28,0xab,0x09],[0x7e,0xae,0xf7,0xcf],[0x15,0xd2,0x15,0x4f],[0x16,0xa6,0x88,0x3c]], iv = "Resto en ville ?"):
 		try:
 			self.plaintext = MatrixHexa(plaintext)
 			self.round_key = [MatrixHexa(key)]
@@ -22,14 +22,28 @@ class AES:
 		for i in range(len(self.plaintext)):
 			self.plaintext[i].shift(i)
 
+	def shift_inv(self):
+		for i in range(len(self.plaintext)):
+			self.plaintext[i].shift_inv(i)
+
 	def sub_bytes(self, sbox):
 		for i in range(len(self.plaintext)):
 			self.plaintext[i].sub_bytes(sbox)
+
+	def sub_bytes_inv(self, sbox_inv):
+		for i in range(len(self.plaintext)):
+			self.plaintext[i].sub_bytes(sbox_inv)
 
 	def mix_columns(self, galois):
 		for i in range(len(self.plaintext)):
 			col = RowHexa(self.plaintext.get_column_as_list(i))
 			col.mix_columns(galois)
+			self.plaintext.set_column(i, col)
+
+	def mix_columns_inv(self, galois_inv):
+		for i in range(len(self.plaintext)):
+			col = RowHexa(self.plaintext.get_column_as_list(i))
+			col.mix_columns(galois_inv)
 			self.plaintext.set_column(i, col)
 
 	def key_expander(self, rcon=MatrixHexa(), sbox=[]):
@@ -53,6 +67,13 @@ class AES:
 		else:
 			self.plaintext += self.round_key[self.round]
 
+	def add_round_key_inv(self):
+		if self.round == 10:
+			self.paintext = self.iv + self.round_key[self.round]
+		else:
+			self.plaintext += self.round_key[10 - self.round]
+			print (self.plaintext)
+
 	def encrypt(self, galois, rcon, sbox):
 		self.key_expander(rcon=rcon, sbox=sbox)
 		self.round = 0
@@ -70,16 +91,33 @@ class AES:
 		self.add_round_key()
 		self.round += 1
 
+	def decrypt(self, galois_inv, rcon, sbox_inv):
+		self.key_expander(rcon=rcon, sbox=sbox)
+		self.round = 0
+		self.add_round_key_inv()
+		self.round += 1
+
+		while self.round < 10:
+			self.shift_inv()
+			self.sub_bytes_inv(sbox_inv)
+			self.add_round_key_inv()
+			self.mix_columns_inv(galois_inv)
+			self.round += 1
+		self.shift_inv()
+		self.sub_bytes_inv(sbox_inv)
+		self.add_round_key_inv()
+		self.round += 1
+
 		cypher = ""
 		for row in self.plaintext.content:
 			cypher += " ".join((format(hex(hexa)) for hexa in row)) + " "
 		return cypher
 
-
-#aes = AES()
-#print(aes)
+aes = AES()
+print(aes)
 #cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
-#print(cypher)
+cypher = aes.decrypt(galois_inv=galois_inv, rcon=rcon, sbox_inv=sbox_inv)
+print(cypher)
 
 #from AEScryp.py import *
 
