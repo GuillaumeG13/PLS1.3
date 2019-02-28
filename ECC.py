@@ -1,4 +1,4 @@
-#from sha import sha256
+import random
 
 class ECurve:
 
@@ -25,6 +25,15 @@ class ECurve:
         print(pub_key)
         return pub_key
 
+    @staticmethod
+    def _make_priv_key():
+        priv_key = random.randrange(2**256 - 1)
+        return priv_key
+
+    def key_gen(self):
+        priv_key = ECurve._make_priv_key()
+        pub_key = self.make_pub_key(priv_key)
+        return hex(priv_key), pub_key
 
     class EPoint:
 
@@ -41,25 +50,11 @@ class ECurve:
             # TODO: verify expression of Pinfinty
             else:
                 a = other.y * self.z - self.y * other.z
-                # print("a: " + str(a.value))
-                # if a.value > self.p:
-                #     print("a > p\n")
                 b = other.x * self.z - self.x * other.z
-                # if b.value > self.p:
-                #     print("b > p\n")
                 c = a * a * self.z * other.z - b * b * b - 2 * b * b * self.x * other.z
-                # if c.value > self.p:
-                #     print("c > p\n")
                 x3 = b*c
-                # print("x3: " + str(x3.value))
-                # if x3.value > self.p:
-                #     print("x > p\n")
                 y3 = a * (b * b * self.x * other.z - c) - b * b * b * self.y * other.z
-                # if y3.value > self.p:
-                #     print("y > p\n")
                 z3 = b * b * b * self.z * other.z
-                # if z3.value > self.p:
-                #     print("z > p\n")
                 return ECurve.EPoint(x3, y3, z3)
 
         def double(self):
@@ -72,7 +67,7 @@ class ECurve:
             z3 = 8 * b*b*b
             return ECurve.EPoint(x3, y3, z3)
 
-        def doubleAndAdd(self, r):
+        def double_and_add(self, r):
             t = self
             r_bin = bin(r)[3:]
             n = len(r_bin)  # r_bin has already been truncated by 1
@@ -88,7 +83,7 @@ class ECurve:
         def __mul__(self, scalar):
             try:
                 if isinstance(scalar, int):
-                    return self.doubleAndAdd(scalar)
+                    return self.double_and_add(scalar)
                 else:
                     raise TypeError("All coordinates and attributes must be integers")
             except TypeError as error:
