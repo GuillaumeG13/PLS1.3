@@ -15,7 +15,5 @@ tls = TLS(None, serveur=False)
 
 tls.secret = "df4a291baa1eb7cfa6934b29b474baad2697e29f1f920dcc77c8a0a088447624"
 
-
-a = tls.run()
-print(a)
+tls.run()
 

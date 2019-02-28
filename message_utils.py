@@ -1,8 +1,9 @@
 from constants import *
 
-def get_bytes(message, index, number):
+def get_bytes(message, index, number=None):
   byte_index = 2*(index)
-  return message[byte_index:byte_index + 2*number]
+  end = byte_index + 2*number if number != None else None
+  return message[byte_index:end]
 
 def get_bytes_list(message, index, number, grouping=1):
   bytes_list = list()
@@ -40,6 +41,9 @@ def is_client_key_exchange(message, **kwargs):
 
 def is_client_cipher_spec(message, **kwargs):
   return get_record_type(message) == RECORD_TYPES.CHANGE_CIPHER_SPEC.value
+
+def format_bytes(message):
+  return " ".join([message[i:i+2] for i in range(0, len(message), 2)])
 
 # def is_client_handshake_finished(message, client_write_key, **kwargs):
 #   data_len = hexa_to_dec(get_bytes(message, 3, 2))
