@@ -1,5 +1,4 @@
 from constants import *
-from aes_utils import *
 
 def get_bytes(message, index, number):
   byte_index = 2*(index)
@@ -42,12 +41,12 @@ def is_client_key_exchange(message, **kwargs):
 def is_client_cipher_spec(message, **kwargs):
   return get_record_type(message) == RECORD_TYPES.CHANGE_CIPHER_SPEC.value
 
-def is_client_handshake_finished(message, client_write_key, **kwargs):
-  data_len = hexa_to_dec(get_bytes(message, 3, 2))
-  data = get_bytes(message, 21, data_len)
-  hexiv = get_bytes(message, 5, 16)
+# def is_client_handshake_finished(message, client_write_key, **kwargs):
+#   data_len = hexa_to_dec(get_bytes(message, 3, 2))
+#   data = get_bytes(message, 21, data_len)
+#   hexiv = get_bytes(message, 5, 16)
   
-  return is_handshake(message) & (get_bytes(aes_decrypt_from_hex_string(data, client_write_key, hexiv), 0, 1) == HANDSHAKE_MESSAGE_TYPES.FINISHED.value)
+#   return is_handshake(message) & (get_bytes(aes_decrypt_from_hex_string(data, client_write_key, hexiv), 0, 1) == HANDSHAKE_MESSAGE_TYPES.FINISHED.value)
 
 def get_message_type(message, **kwargs):
   test_functions = {
