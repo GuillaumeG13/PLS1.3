@@ -1,6 +1,8 @@
 # PLS1.3
 
-La liste des algorithmes cryptographiques à implémenter est le suivant :
+# Transport Layer Security 1.3 protocol implemented by Crampon Maxime, Carel Julie, Marcou Clément, Dong Elsa, Dequeker Yoann and Gay Guillaume.
+
+La liste des algorithmes cryptographiques à implémenter est la suivante :
 
 SHA-256
 AES-128
