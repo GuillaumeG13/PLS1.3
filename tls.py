@@ -105,13 +105,11 @@ class TLS:
 		"""
 		random = params['random']
 		session_id = params['session_id']
-		cipher_suites = params['cipher_suites']
-		compression_method = params['compression_method']
 
 		key_share_extension = self.get_extension_key_share() + '002b00020304'
 		extension_length = dec_to_hexa(b_len(key_share_extension), 2)
 
-		data = PROTOCOL_VERSION + random + session_id + cipher_suites + compression_method + extension_length + key_share_extension
+		data = PROTOCOL_VERSION + random + session_id + extension_length + key_share_extension
 		print(len(data))
 		data_length = self.format_length(len(data)/2, 6)
 
@@ -140,8 +138,6 @@ class TLS:
 		Client Random: 32 bytes
 			--> 43 bytes
 		Session ID length: 1 byte
-		Cipher Suites length: 2 bytes
-		Compression Methods length: 1 byte
 		"""
 		random_index = 11
 
