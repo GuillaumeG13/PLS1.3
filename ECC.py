@@ -42,7 +42,6 @@ class ECurve:
             self.y = ECurve.IntMod(y)
             self.z = ECurve.IntMod(z)
             self.v = ECurve.IntMod(-3)
-            self.p = 2**256 - 189  # debug
 
         def __add__(self, other):
             if self.y == -other.y:
