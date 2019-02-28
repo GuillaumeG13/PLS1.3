@@ -33,7 +33,7 @@ class ECurve:
     def key_gen(self):
         priv_key = ECurve._make_priv_key()
         pub_key = self.make_pub_key(priv_key)
-        return hex(priv_key), pub_key
+        return hex(priv_key)[2:], pub_key[2:]
 
     class EPoint:
 

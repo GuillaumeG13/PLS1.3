@@ -1,1 +1,0 @@
-wsl ./run_hkdf.sh %1 %2

@@ -6,12 +6,13 @@ from constants import *
 from message_utils import *
 import hmac
 import AEScryp as AES
+from ECC import *
 
 DEBUG = True
 
 class TLS:
-	def __init__(self, curve, serveur=True, certificate=""):
-		self.curve = curve
+	def __init__(self, serveur=True, certificate=""):
+		self.curve = ECurve()
 		self.callback = None
 		self.socket = SocketTLS(ip="127.0.0.1", port=1799, server=serveur, workers=5)
 		self.messageHelloList = []
@@ -193,14 +194,9 @@ class TLS:
 
 		return hello
 
+	# Tested
 	def generate_asymetrique_keys(self):
-		# TODO : Maxime & Marcou
-		if not self.serveur:
-			self.private_key = "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
-			self.public_key = "358072d6365880d1aeea329adf9121383851ed21a28e3b75e965d0d2cd166254"
-		else:
-			self.private_key = "909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf"
-			self.public_key = "9fd7ad6dcff4298dd3f96d5b1b2af910a0535b1488d7f8fabb349a982880b615"
+		(self.public_key, self.private_key) = self.curve.key_gen()
 		self.log("Public key = " + self.public_key)
 		self.log("Private key = " + self.private_key)
 
@@ -248,10 +244,10 @@ class TLS:
 	def handshake_key_generation(self):
 		# Multiplication courbe ECC
 		# TODO : Maxime et Marcou
-		# self.secret = hex(int(self.private_key, 16) * int(self.external_key, 16)).split('0x')[1]
-		# hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
+		# self.secret = self.private_key * self.external_key[2:]
+		hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
 
-		hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
+		# hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
 		self.log("Hello hash : " + hello_hash)
 		self.key_expansion(hello_hash)
 		return self.client_handshake_key.hex(), self.server_handshake_key.hex(), self.client_handshake_iv.hex(), self.server_handshake_iv.hex()
