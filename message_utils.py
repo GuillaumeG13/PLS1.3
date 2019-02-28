@@ -1,8 +1,9 @@
 from constants import *
 
-def get_bytes(message, index, number):
+def get_bytes(message, index, number=None):
   byte_index = 2*(index)
-  return message[byte_index:byte_index + 2*number]
+  end = byte_index + 2*number if number != None else None
+  return message[byte_index:end]
 
 def get_bytes_list(message, index, number, grouping=1):
   bytes_list = list()

@@ -143,7 +143,6 @@ class TLS:
 		self.messageHelloList.append(msg[10:])
 		self.messageHandshake.append(msg[10:])
 
-		self.log("Hello Message : " + msg)
 		self.log("Hello record_header : " + format_bytes(record_header))
 		self.log("Hello handshake_header : " + format_bytes(handshake_header))
 		self.log("Hello key_share_extension : " + format_bytes(key_share_extension))
@@ -157,7 +156,7 @@ class TLS:
 	def receive_hello(self):
 		message = self.socket.receive().decode()
 		self.log("Received message: " + message)
-		self.messageHelloList.append(message[10:])
+		self.messageHelloList.append(get_bytes(message, 5))
 		""" 
 		Record Header: 5 bytes
 		Handshake Header: 4 bytes
@@ -252,7 +251,7 @@ class TLS:
 		hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
 
 		# hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
-		print("Hello hash : " + hello_hash)
+		self.log("Hello hash : " + hello_hash)
 		self.key_expansion(hello_hash)
 		return self.client_handshake_key.hex(), self.server_handshake_key.hex(), self.client_handshake_iv.hex(), self.server_handshake_iv.hex()
 
@@ -260,6 +259,25 @@ class TLS:
 	def send_certificate(self, params):
 		self.log("Sending centificate...")
 		# First message is related to certificate
+		"""
+			[DATA VERIFY]:
+		Handshake message type (0f): 1 byte
+		Length of following: 3 bytes
+		Data verify (SHA256 of DATA): 256 bytes
+		Server Handshake Finished: ??? bytes
+
+			[DATA]:
+		Handshake message type (0b): 1 byte
+		Length of following: 3 bytes
+		Certificate Length: 3 bytes
+		Certificate: 305 bytes
+		Certificate extension: 2 bytes
+
+			[SERVER HANDSHAKE FINISHED]
+		Server Handshake Finished (14): 1 byte
+		Length of following: 3 bytes
+		Verify Data: HMAC of finished_key and finished_hash: ??? bytes
+		"""
 		data = self.format_length(len(self.certificate) / 2, 6) + self.certificate + params['certificate_extension']
 		data = params['request_context'] + self.format_length(len(data)/2, 6) + data
 		data = '0b' + self.format_length(len(data) / 2, 6) + data
@@ -274,7 +292,7 @@ class TLS:
 		data += data_verify
 		header = '170303' + self.format_length(len(data)/2, 4) # Add data size verification data < 16^5 - 1
 		data = header + data
-		print("Wrapper data : " + data)
+		self.log("Wrapper data : " + data)
 		self.socket.update(data)
 		self.socket.send()
 		self.log("Certificate sent!")
@@ -285,30 +303,38 @@ class TLS:
 		data = self.socket.receive().decode()
 		self.log("Certificate received!")
 		self.log("Received: " + format_bytes(data))
-		record_type = data[0:2]
-		
+
+		record_type = get_bytes(data, 0, 2)
 		self.log("type = " + record_type)
 
-		cipher = data[8:]
-
-		body = ""
+		cipher = get_bytes(data, 5)
+		body = cipher
 		# body = self.decrypt(cipher, self.server_handshake_key, self.server_handshake_iv)
 
-		certificate_type = body[0:2]
-		certificate_size = int(body[8:14], 16)
-		index = (14 + certificate_size)
-		certificate = body[14: index]
+		self.log("BODY = " + format_bytes(body))
+		certificate_type = get_bytes(body, 0, 2)
+		certificate_size = hexa_to_dec(get_bytes(body, 8, 3))
+		self.log("get_bytes(body, 8, 3) = " + format(get_bytes(body, 8, 3)))
+		self.log("certificate_size = " + format(certificate_size))
+
+		certificate = get_bytes(body, 11, certificate_size)
+		self.log("certificate = " + format_bytes(certificate))
 		# TODO : Verify the content of the certificate
 
-		self.log("body[14: index] = " + format_bytes(body[14: index]))
+		index = 22 + 2 * certificate_size
 
 		verify_size = int(body[index+6:index+12],16)
 		verify = body[index+12: index+12+verify_size]
+		
+		self.log("verify = " + format_bytes(verify))
+		
 		# TODO : Verify Signature
 
 		index = index+12+verify_size
 		finish_size = int(body[index+2:index+6],16)
 		finish = body[index+6:index+6+finish_size]
+
+		self.log("finish =  " + format(finish))
 
 		self.receive_server_handshake_finished(finish)
 
@@ -330,7 +356,7 @@ class TLS:
 
 		data = "14" + self.format_length(len(verify_data.hex()) / 2, 6) + verify_data.hex()
 
-		print("Challenge Frame : " + data)
+		self.log("Challenge Frame : " + data)
 		return data
 
 	# Tested
@@ -344,7 +370,7 @@ class TLS:
 			finished_hash = hashlib.sha256(unhexlify("".join(self.messageHandshake))).digest()
 			# if verify_data != hmac.new(finished_key, finished_hash).hexdigest():
 			#	raise ValueError("Verify data mismatch")
-			print('Receive client handshake')
+			self.log('Receive client handshake')
 	# Tested
 	def receive_server_handshake_finished(self, finish):
 		finished_key = self.hkdf_expand_label(self.server_handshake_traffic_secret, b"finished", b"", 32)
@@ -382,7 +408,7 @@ class TLS:
 			print(message)
 
 	def log_title(self, title):
-		print("\n\t\t" + title)
+		print("\n\t\t-- " + title + " --")
 
 	@staticmethod
 	def data_encryption(data, key, iv):
