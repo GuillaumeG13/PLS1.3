@@ -41,6 +41,9 @@ def is_client_key_exchange(message, **kwargs):
 def is_client_cipher_spec(message, **kwargs):
   return get_record_type(message) == RECORD_TYPES.CHANGE_CIPHER_SPEC.value
 
+def format_bytes(message):
+  return " ".join([message[i:i+2] for i in range(0, len(message), 2)])
+
 # def is_client_handshake_finished(message, client_write_key, **kwargs):
 #   data_len = hexa_to_dec(get_bytes(message, 3, 2))
 #   data = get_bytes(message, 21, data_len)
