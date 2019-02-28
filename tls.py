@@ -159,7 +159,6 @@ class TLS:
 		key_share_index = extensions_index + 2
 		n_key_share = hexa_to_dec(get_bytes(message, key_share_index - 2, 2))
 
-
 		hello = dict()
 		hello['random'] = get_bytes(message, random_index, 32)
 		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
@@ -169,7 +168,6 @@ class TLS:
 		print(hello)
 
 		return hello
-
 
 	def generate_asymetrique_keys(self):
 		# TODO : Maxime & Marcou
