@@ -131,14 +131,35 @@ class TLS:
 
 		return data
 
-	# Tested
-	def receive_hello(self):
-		# msg = self.socket.receive()
-		msg = "16030100ca010000c60303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff0006130113021303010000770000001800160000136578616d706c652e756c666865696d2e6e6574000a00080006001d00170018000d00140012040308040401050308050501080606010201003300260024001d0020358072d6365880d1aeea329adf9121383851ed21a28e3b75e965d0d2cd166254002d00020101002b0003020304"
-		self.messageHelloList.append(msg[10:])
-		self.messageHandshake.append(msg[10:])
+	def receive_hello(self, message):
+		self.messageHelloList.append(message[5:])
+		""" 
+		Record Header: 5 bytes
+		Handshake Header: 4 bytes
+		Client Version: 2 bytes
+		Client Random: 32 bytes
+			--> 43 bytes
+		Session ID length: 1 byte
+		Cipher Suites length: 2 bytes
+		Compression Methods length: 1 byte
+		"""
+		random_index = 11
+		session_id_index = random_index + 32
+		n_session_id = hexa_to_dec(get_bytes(message, session_id_index, 1))
+		cipher_suites_index = session_id_index + n_session_id + 1
+		n_ciph_s = hexa_to_dec(get_bytes(message, cipher_suites_index, 2))
+		compression_methods_index = cipher_suites_index + n_ciph_s + 2
+		n_comp_m = hexa_to_dec(get_bytes(message, compression_methods_index, 1))
 
-	# Tested
+		hello = dict()
+		hello['random'] = get_bytes(message, random_index, 32)
+		hello['session_id'] = get_bytes(message, session_id_index, n_session_id)
+		hello['cipher_suites'] = get_bytes(message, cipher_suites_index, n_ciph_s + 2)
+		hello['compression_method'] = get_bytes(message, compression_methods_index, n_comp_m + 1)
+
+		return hello
+
+
 	def generate_asymetrique_keys(self):
 		# TODO : Maxime & Marcou
 		if not self.serveur:
