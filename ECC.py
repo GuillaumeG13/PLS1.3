@@ -41,8 +41,8 @@ class ECurve:
         if self.verify_point(pub_key) is not True:
             return False
         signature = signature[2:]
-        r = int(signature[:15], 16)
-        s = int(signature[16:], 16)
+        r = int(signature[:63], 16)
+        s = int(signature[64:], 16)
         if r < 1 or r > self.order - 1:
             return False
         if r < 1 or r > self.order - 1:
@@ -79,9 +79,9 @@ class ECurve:
     @staticmethod
     def pub_key_to_point(pub_key):
         pub_key = pub_key[2:]
-        x = int(pub_key[:15], 16)
-        y = int(pub_key[16:31], 16)
-        z = int(pub_key[32:47], 16)
+        x = int(pub_key[:63], 16)
+        y = int(pub_key[64:127], 16)
+        z = int(pub_key[128:191], 16)
         return ECurve.EPoint(x, y, z)
 
     class EPoint:
