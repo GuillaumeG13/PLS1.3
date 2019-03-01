@@ -243,8 +243,7 @@ class TLS:
 	# Tested
 	def handshake_key_generation(self):
 		# Multiplication courbe ECC
-		# TODO : Maxime et Marcou
-		# self.secret = self.private_key * self.external_key[2:]
+		self.secret = self.curve.make_shared_secret("0x" + self.private_key, self.external_key[2:])
 		hello_hash = hashlib.sha256(unhexlify("".join(self.messageHelloList))).hexdigest()
 
 		# hello_hash = "da75ce1139ac80dae4044da932350cf65c97ccc9e33f1e6f7d2d4b18b736ffd5"
