@@ -5,13 +5,14 @@ class AES:
 	plaintext = []     # Plaintext : will contain data after each encryption step
 	round_key = []
 	round     = 0
-	iv		  = []
+	#iv		  = []
 
-	def __init__(self, plaintext = [[0xd6, 0xef, 0xa6, 0xdc], [0x4c, 0xe8, 0xef, 0xd2], [0x47, 0x6b, 0x95, 0x46], [0xd7, 0x6a, 0xcd, 0xf0]], key = [[0x2b,0x28,0xab,0x09],[0x7e,0xae,0xf7,0xcf],[0x15,0xd2,0x15,0x4f],[0x16,0xa6,0x88,0x3c]], iv = "Resto en ville ?"):
+	def __init__(self, plaintext = "Resto en ville ?", key = [[0x2b,0x28,0xab,0x09],[0x7e,0xae,0xf7,0xcf],[0x15,0xd2,0x15,0x4f],[0x16,0xa6,0x88,0x3c]]):
 		try:
 			self.plaintext = MatrixHexa(plaintext)
 			self.round_key = [MatrixHexa(key)]
-			self.iv 	   = MatrixHexa (iv)
+			#self.iv 	   = MatrixHexa(iv)
+			#self.memory    = MatrixHexa(plaintext)
 		except TypeError:
 			raise TypeError("Plaintext and key shall be a string or a matrix")
 
@@ -62,50 +63,30 @@ class AES:
 			self.round_key.append(computed_key)
 
 	def add_round_key(self):
-		if self.round == 0:
-			self.plaintext = self.iv + self.round_key[self.round]
-		else:
-			self.plaintext += self.round_key[self.round]
+		self.plaintext += self.round_key[self.round]
 
 	def add_round_key_inv(self):
-		if self.round == 10:
-			self.paintext = self.iv + self.round_key[self.round]
-		else:
-			self.plaintext += self.round_key[10 - self.round]
-			print (self.plaintext)
+		self.plaintext += self.round_key[10 - self.round]
 
 	def encrypt(self, galois, rcon, sbox):
 		self.key_expander(rcon=rcon, sbox=sbox)
 		self.round = 0
+		#self.plaintext += self.iv
 		self.add_round_key()
 		self.round += 1
 
 		while self.round < 10:
+			#self.plaintext += self.memory
 			self.sub_bytes(sbox)
 			self.shift()
 			self.mix_columns(galois)
 			self.add_round_key()
 			self.round += 1
+
+		#self.plaintext += self.memory
 		self.sub_bytes(sbox)
 		self.shift()
 		self.add_round_key()
-		self.round += 1
-
-	def decrypt(self, galois_inv, rcon, sbox_inv):
-		self.key_expander(rcon=rcon, sbox=sbox)
-		self.round = 0
-		self.add_round_key_inv()
-		self.round += 1
-
-		while self.round < 10:
-			self.shift_inv()
-			self.sub_bytes_inv(sbox_inv)
-			self.add_round_key_inv()
-			self.mix_columns_inv(galois_inv)
-			self.round += 1
-		self.shift_inv()
-		self.sub_bytes_inv(sbox_inv)
-		self.add_round_key_inv()
 		self.round += 1
 
 		cypher = ""
@@ -113,17 +94,55 @@ class AES:
 			cypher += " ".join((format(hex(hexa)) for hexa in row)) + " "
 		return cypher
 
-aes = AES()
-print(aes)
+	def decrypt(self, galois_inv, rcon, sbox_inv, sbox):
+		self.key_expander(rcon=rcon, sbox=sbox)
+		self.round = 0
+		self.add_round_key_inv()
+		#self.plaintext += self.iv
+		self.round += 1
+
+		while self.round < 10:
+			self.shift_inv()
+			self.sub_bytes_inv(sbox_inv)
+			self.add_round_key_inv()
+			self.mix_columns_inv(galois_inv)
+			#self.plaintext += self.memory
+			self.round += 1
+
+		self.shift_inv()
+		self.sub_bytes_inv(sbox_inv)
+		self.add_round_key_inv()
+		#self.plaintext += self.memory
+		self.round += 1
+
+		cypher = ""
+		for row in self.plaintext.content:
+			cypher += " ".join((format(hex(hexa)) for hexa in row)) + " "
+		return cypher
+
+
+
+#aes = AES()
+#print(aes)
 #cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
-cypher = aes.decrypt(galois_inv=galois_inv, rcon=rcon, sbox_inv=sbox_inv)
-print(cypher)
+#cypher = aes.decrypt(galois_inv=galois_inv, rcon=rcon, sbox_inv=sbox_inv, sbox=sbox)
+#print(cypher)
 
-#from AEScryp.py import *
 
-#def data_encryption (self, data, key, iv)
-#	aes = AES(data, key, iv)
-#	cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
-#	self.socket.data = cypher
-#	self.socket.update(cypher)
-#	self.socket.send()
+'''
+from AEScryp.py import *
+
+def data_encryption(self, data, key)
+	aes = AES(data, key)
+	cypher = aes.encrypt(galois=galois, rcon=rcon, sbox=sbox)
+	self.socket.data = cypher
+	self.socket.update(cypher)
+	self.socket.send()
+
+def data_decryption(self, data, key)
+	aes = AES(data, key)
+	plaintext = aes.decrypt(galois_inv=galois_inv, rcon=rcon, sbox_inv=sbox_inv, sbox=sbox)
+	self.socket.data = plaintext
+	self.socket.update(plaintext)
+	self.socket.send()
+'''
