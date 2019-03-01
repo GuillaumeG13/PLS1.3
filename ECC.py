@@ -20,7 +20,7 @@ class ECurve:
     def make_shared_secret(self, priv_key, pub_key):
         priv_key = int(priv_key, 16)
         pub_key = pub_key[2:]
-        pub_point = self.EPoint(pub_key[0:63], pub_key[64:127], pub_key[128:191])
+        pub_point = self.EPoint(pub_key[0:64], pub_key[64:128], pub_key[128:192])
         secret = priv_key * pub_point
         return hex(secret.x) + hex(secret.y)[2:] + hex(secret.z)[2:]
 
@@ -33,23 +33,23 @@ class ECurve:
         return pub_key
 
     def signature(self, priv_key, message):
-        hash = sha256(message)
+        hash = int(sha256(message), 16)
         k = 0
         r = 0
         s = 0
         P = self.Gen
         while r == 0 or s == 0:
-            k = secure_random()
+            k = secure_random(256)
             P = k * self.Gen
-            r = P.x % self.order
-            s = inverse(k) * (hash + r * priv_key) % self.order
+            r = (P.x * ECurve.IntMod(inverse(P.z.value, self.p0 + self.p1))).value % self.order
+            s = inverse(k, self.order) * (hash + r * priv_key) % self.order
         x = str.format('0x{:064X}', r)
         y = str.format('{:064X}', s)
         return x + y
 
     @staticmethod
     def _make_priv_key():
-        priv_key = random.randrange(2**256 - 1)
+        priv_key = secure_random(256)
         return priv_key
 
     def key_gen(self):
@@ -59,34 +59,33 @@ class ECurve:
 
     def verify_signature(self, pub_key, pL, signature):
         pub_point = ECurve.pub_key_to_point(pub_key)
-        if self.verify_point(pub_key) is not True:
+        if self.verify_point(pub_point) is not True:
             return False
         signature = signature[2:]
-        r = int(signature[:63], 16)
+        r = int(signature[:64], 16)
         s = int(signature[64:], 16)
         if r < 1 or r > self.order - 1:
             return False
         if r < 1 or r > self.order - 1:
             return False
-        e = sha256(pL)
+        e = int(sha256(pL), 16)
         w = inverse(s, self.order)
         u1 = self.mul_mod_order(e, w)
         u2 = self.mul_mod_order(r, w)
         verification_point = u1 * self.Gen + u2 * pub_point
         if self.verify_point(verification_point) is not True:
             return False
-        if r == verification_point.x.value:
+        if r == (verification_point.x * ECurve.IntMod(inverse(verification_point.z.value, self.p0 + self.p1))).value:
             return True
         else:
             return False
 
     def verify_point(self, point):
-        y = point.x * point.x * point.x + self.v * point.x + self.w
-        y2 = (y * y).value
+        y2z = point.x * point.x * point.x + self.v * point.x * point.z * point.z + self.w * point.z * point.z * point.z
         nQ = self.order * point
         if point.z.value == 0:
             return False
-        elif y2 != (point.y * point.y).value:
+        elif y2z != (point.y * point.y * point.z).value:
             return False
         elif nQ.z.value != 0:
             return False
@@ -100,9 +99,9 @@ class ECurve:
     @staticmethod
     def pub_key_to_point(pub_key):
         pub_key = pub_key[2:]
-        x = int(pub_key[:63], 16)
-        y = int(pub_key[64:127], 16)
-        z = int(pub_key[128:191], 16)
+        x = int(pub_key[:64], 16)
+        y = int(pub_key[64:128], 16)
+        z = int(pub_key[128:192], 16)
         return ECurve.EPoint(x, y, z)
 
     class EPoint:
@@ -221,17 +220,17 @@ class ECurve:
 
 
 def inverse(x, p):
-    inv1 = 1
-    inv2 = 0
-    while p != 1 and p != 0:
-        inv1, inv2 = inv2, inv1 - inv2 * (x / p)
-        x, p = p, x % p
-    return inv2
+    # inv1 = 1
+    # inv2 = 0
+    # while p != 1 and p != 0:
+    #     inv1, inv2 = inv2, inv1 - inv2 * (x / p)
+    #     x, p = p, x % p
+    # return inv2
+    return pow(x, p-2, p)
 
-def secure_random():
+def secure_random(k):
+    return random.getrandbits(k)
 
-    return 0
-  
 if __name__ == "__main__":
     E = ECurve()
     p1 = E.new_point(77512729778395059953025101417153080590899181236631402472091884972383820944632,
@@ -244,6 +243,11 @@ if __name__ == "__main__":
     Gen = E.new_point(105253582565059894136665861841922275289986629145388631647570749365572640546948,
                       96137476056738940893930759645003034760186494279474271611460405989544632011578,
                       1)
+    priv_key = secure_random(256)
+    sign = E.signature(priv_key, "bonjour")
+    pub_key = E.make_pub_key(priv_key)
+    vrai = E.verify_signature(pub_key, "bonjour", sign)
+    print("sign fonctionne : " + str(vrai))
     # print(E.make_pub_key(105253582565059894136665861841922275289986629145388631647570749365572640546948))
     # p4 = p2.double()
     # print(p4)
