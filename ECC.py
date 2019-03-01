@@ -57,6 +57,54 @@ class ECurve:
         pub_key = self.make_pub_key(priv_key)
         return hex(priv_key), pub_key
 
+    def verify_signature(self, pub_key, pL, signature):
+        pub_point = ECurve.pub_key_to_point(pub_key)
+        if self.verify_point(pub_key) is not True:
+            return False
+        signature = signature[2:]
+        r = int(signature[:63], 16)
+        s = int(signature[64:], 16)
+        if r < 1 or r > self.order - 1:
+            return False
+        if r < 1 or r > self.order - 1:
+            return False
+        e = sha256(pL)
+        w = inverse(s, self.order)
+        u1 = self.mul_mod_order(e, w)
+        u2 = self.mul_mod_order(r, w)
+        verification_point = u1 * self.Gen + u2 * pub_point
+        if self.verify_point(verification_point) is not True:
+            return False
+        if r == verification_point.x.value:
+            return True
+        else:
+            return False
+
+    def verify_point(self, point):
+        y = point.x * point.x * point.x + self.v * point.x + self.w
+        y2 = (y * y).value
+        nQ = self.order * point
+        if point.z.value == 0:
+            return False
+        elif y2 != (point.y * point.y).value:
+            return False
+        elif nQ.z.value != 0:
+            return False
+        else:
+            return True
+
+    def mul_mod_order(self, a, b):
+        # TODO: implement modular regression by the curve order (montgomery?) for signature and verification purpose
+        return (a * b) % self.order
+
+    @staticmethod
+    def pub_key_to_point(pub_key):
+        pub_key = pub_key[2:]
+        x = int(pub_key[:63], 16)
+        y = int(pub_key[64:127], 16)
+        z = int(pub_key[128:191], 16)
+        return ECurve.EPoint(x, y, z)
+
     class EPoint:
 
         def __init__(self, x, y, z):
@@ -64,7 +112,6 @@ class ECurve:
             self.y = ECurve.IntMod(y)
             self.z = ECurve.IntMod(z)
             self.v = ECurve.IntMod(-3)
-            self.p = 2**256 - 189  # debug
 
         def __add__(self, other):
             if self.y == -other.y:
@@ -114,6 +161,7 @@ class ECurve:
         __rmul__ = __mul__
 
     class IntMod(int):
+        # TODO: test to know if we can delete the 'value' parameter; if not : verify that 'value' is always used
 
         def __init__(self, val):
             super().__init__()
@@ -183,7 +231,7 @@ def inverse(x, p):
 def secure_random():
 
     return 0
-
+  
 if __name__ == "__main__":
     E = ECurve()
     p1 = E.new_point(77512729778395059953025101417153080590899181236631402472091884972383820944632,
@@ -201,4 +249,6 @@ if __name__ == "__main__":
     # print(p4)
     # p5 = 3 * p2
     # print(p5)
+
+# TODO: implement better modular inverse
 
