@@ -282,7 +282,7 @@ class TLS:
 		# This message contain information to verify certificate information
 		data_verify = hashlib.sha256(str.encode(data)).hexdigest()
 		# TODO : Signature with elliptical curve
-		# data = self.curve.sign(data)
+		data = self.curve.signature(data)
 		data_verify += HANDSHAKE_MESSAGE_TYPES.CERTIFICATE_VERIFY.value + self.format_length(len(data)/2, 6) + data_verify + self.send_server_handshake_finished()
 
 		# data = self.data_encryption(data + data_verify, self.server_handshake_key, self.server_handshake_iv)
@@ -325,7 +325,8 @@ class TLS:
 		self.log("verify = " + format_bytes(verify))
 		
 		# TODO : Verify Signature
-
+		if self.curve.verify_signature(self.external_key, certificate, verify) is not True:
+			raise ValueError("Certificat non valide")
 		# index = index+12+verify_size
 		# finish_size = int(body[index+2:index+6],16)
 		# finish = body[index+6:index+6+finish_size]
@@ -401,7 +402,7 @@ class TLS:
 	def log(self, message):
 		if DEBUG == True:
 			header = ' [SERVER]: ' if self.serveur else ' [CLIENT]: '
-			print(header, end="")
+			print(header + '\n')
 			print(message)
 
 	def log_title(self, title):
