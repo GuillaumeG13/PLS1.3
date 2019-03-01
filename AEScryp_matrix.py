@@ -78,13 +78,10 @@ class RowHexa:
 		self[len(self) - 1] = memory
 
 	def unit_shift_inv(self):
-		"""
-		Make a shift of 1 index to the right
-		"""
-		memory = self[len(self) - 1]
-		for i in range(1, len(self)):
-			self[i] = self[i-1]
-		self[0] = memory
+		memory = self[:]
+		for i in range(0, len(self) - 1):
+			self[i+1] = memory[i]
+		self[0] = memory[len(self) - 1]
 
 	def shift(self, inc=1):
 		"""
@@ -99,7 +96,7 @@ class RowHexa:
 		Make a shift of inc index to the right
 			:param inc: number of shift shall be done
 		"""
-		for i in range (inc):
+		for i in range(inc):
 			self.unit_shift_inv()
 
 	def sub_bytes(self, sbox):
@@ -113,6 +110,7 @@ class RowHexa:
 	def sub_bytes_inv(self, sbox_inv):
 		for i in range (len(self)):
 			self[i] = sbox_inv[i]
+
 	"""
 	@staticmethod
 	def multiplication_galois(a, b):
@@ -146,9 +144,7 @@ class RowHexa:
 		self.reset()
 		for i in range(len(self)):
 			for j in range(len(self)):
-				#self[i] ^= RowHexa.multiplication_galois(galois[i][j], tmp[j])
 				self[i] ^= RowHexa.multiplication_galois(galois[i][j], tmp[j])
-
 
 
 	def mix_columns_inv(self, galois_inv):
