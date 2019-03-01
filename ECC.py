@@ -1,4 +1,5 @@
 import random
+from sha import sha256
 
 class ECurve:
 
@@ -16,14 +17,35 @@ class ECurve:
         point = self.EPoint(x, y, z)
         return point
 
+    def make_shared_secret(self, priv_key, pub_key):
+        priv_key = int(priv_key, 16)
+        pub_key = pub_key[2:]
+        pub_point = self.EPoint(pub_key[0:63], pub_key[64:127], pub_key[128:191])
+        secret = priv_key * pub_point
+        return hex(secret.x) + hex(secret.y)[2:] + hex(secret.z)[2:]
+
     def make_pub_key(self, priv_key):
         pub_point = priv_key * self.Gen
-        x = self.IntMod(pub_point.x).value
-        y = self.IntMod(pub_point.y).value
-        z = self.IntMod(pub_point.z).value
-        pub_key = str(hex(x) + str(hex(y))[2:] + str(hex(z))[2:])
-        print(pub_key)
+        x = str.format('0x{:064X}', pub_point.x)
+        y = str.format('{:064X}', pub_point.y)
+        z = str.format('{:064X}', pub_point.z)
+        pub_key = x + y + z
         return pub_key
+
+    def signature(self, priv_key, message):
+        hash = sha256(message)
+        k = 0
+        r = 0
+        s = 0
+        P = self.Gen
+        while r == 0 or s == 0:
+            k = secure_random()
+            P = k * self.Gen
+            r = P.x % self.order
+            s = inverse(k) * (hash + r * priv_key) % self.order
+        x = str.format('0x{:064X}', r)
+        y = str.format('{:064X}', s)
+        return x + y
 
     @staticmethod
     def _make_priv_key():
@@ -150,6 +172,18 @@ class ECurve:
             return ECurve.IntMod(c)
 
 
+def inverse(x, p):
+    inv1 = 1
+    inv2 = 0
+    while p != 1 and p != 0:
+        inv1, inv2 = inv2, inv1 - inv2 * (x / p)
+        x, p = p, x % p
+    return inv2
+
+def secure_random():
+
+    return 0
+
 if __name__ == "__main__":
     E = ECurve()
     p1 = E.new_point(77512729778395059953025101417153080590899181236631402472091884972383820944632,
@@ -162,9 +196,7 @@ if __name__ == "__main__":
     Gen = E.new_point(105253582565059894136665861841922275289986629145388631647570749365572640546948,
                       96137476056738940893930759645003034760186494279474271611460405989544632011578,
                       1)
-    E.make_pub_key(105253582565059894136665861841922275289986629145388631647570749365572640546948)
-    # p3 = p1 + p2
-    # print(p3)
+    # print(E.make_pub_key(105253582565059894136665861841922275289986629145388631647570749365572640546948))
     # p4 = p2.double()
     # print(p4)
     # p5 = 3 * p2
